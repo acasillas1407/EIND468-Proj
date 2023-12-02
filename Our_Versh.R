@@ -25,7 +25,7 @@ df_prices <- df  %>%
 
 # save data into file
 df_out <- 'GARCH-Data.rds'
-write_rds(df_prices, rds_out)
+write_rds(df_prices, df_out)
 
 
 #################################################
@@ -44,7 +44,7 @@ if (!dir.exists('figs')) dir.create('figs')
 source('garch_fcts.R')
 
 # get price data
-df_prices <- read_rds('data/RAC-GARCH-Data.rds')
+df_prices <- read_rds('data/GARCH-Data.rds')
 series_name <- df_prices$series_name[1]
 
 # get inflation data - using the Broad National Consumer Index 
