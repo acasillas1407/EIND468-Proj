@@ -101,6 +101,11 @@ scale_color_brewer(palette = 'BrBG')
 
 p2
 
+pb <- plot_grid(p1, p2, nrow = 2, 
+               labels = 'AUTO')
+
+pb
+
 p <- ggAcf(x = df_prices$log_ret, lag.max = 10) +
   labs(title = paste0('Autocorrelogram for the Log Returns of ', series_name)) +
   theme_bw(base_family = "TT Times New Roman")
