@@ -85,6 +85,9 @@ p1 <- ggplot(df_prices, aes(x = Date, y = Close)) +
   theme_bw(base_family = "TT Times New Roman") 
 p1
 
+ggsave(filename = paste0('figs/fig02a_', series_name, '_prices.png'), 
+       plot = p1)
+
 largest_tab <- df_prices %>%
   top_n(abs(log_ret), n = n_largest)
 
@@ -108,6 +111,9 @@ scale_color_brewer(palette = 'BrBG')
 
 p2
 
+ggsave(filename = paste0('figs/fig02b_', series_name, '_returns.png'), 
+       plot = p2)
+
 
 pb <- plot_grid(p1, p2, nrow = 2, 
                labels = 'AUTO')
@@ -121,11 +127,14 @@ p <- ggAcf(x = df_prices$log_ret, lag.max = 10) +
 
 p
 
+ggsave(filename = paste0('figs/fig02b_', series_name, '_ACF.png'), 
+       plot = p)
+
 ##################################################################################
 
 max_lag <- 5
-my_html_file <- 'tab03-Arch_Test.html'
-my_xlsx_file <- 'tab03-Arch_Test.xlsx'
+my_html_file <- 'tabs/tab03-Arch_Test.html'
+my_xlsx_file <- 'tabs/tab03-Arch_Test.xlsx'
 
 if (!dir.exists(dirname(my_html_file))) dir.create(dirname(my_html_file))
 
@@ -161,7 +170,7 @@ arch_lag <- 1 # lag in arch effect (1 in paper)
 garch_lag <- 1 # lag in garch effect (1 in paper)
 models_to_estimate <- c('sGARCH', 'eGARCH', 'gjrGARCH') # see rugarch manual for more
 distribution_to_estimate <- 'norm' # distribution used in all models
-my_html_file <- 'tab04-estimation_garch.html' # where to save html file?
+my_html_file <- 'tabs/tab04-estimation_garch.html' # where to save html file?
 
 # close all opened windows
 graphics.off()
