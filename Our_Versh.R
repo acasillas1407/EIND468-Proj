@@ -309,17 +309,35 @@ p3 <- ggplot(df_long %>%
 
 
 # estimate best garch model by BIC (used in next section)
-best_spec = ugarchspec(variance.model = list(model =  out$best_bic$type_model, 
+best_spec_bic = ugarchspec(variance.model = list(model =  out$best_bic$type_model, 
                                              garchOrder = c(out$best_bic$lag_arch,
                                                             out$best_bic$lag_garch)),
                        mean.model = list(armaOrder = c(out$best_bic$lag_ar, 
                                                        out$best_bic$lag_ma)),
                        distribution = 'std')
 
-my_best_garch <- ugarchfit(spec = best_spec, 
+
+# estimate best garch model by AIC (used in next section)
+best_spec_aic = ugarchspec(variance.model = list(model =  out$best_aic$type_model, 
+                                             garchOrder = c(out$best_aic$lag_arch,
+                                                            out$best_aic$lag_garch)),
+                       mean.model = list(armaOrder = c(out$best_aic$lag_ar, 
+                                                       out$best_aic$lag_ma)),
+                       distribution = 'std')
+
+
+
+my_best_garch <- ugarchfit(spec = best_spec_bic, 
+                           data = df_prices$log_ret)
+
+my_best_garch2 <- ugarchfit(spec = best_spec_aic, 
                            data = df_prices$log_ret)
 
 my_best_garch
+
+my_best_garch2
+
+
 
 write_rds(my_best_garch, 'data/garch_model.rds')
 ########################################################################
@@ -357,6 +375,7 @@ tab_prob <- df_sim %>%
   group_by(ref_date) %>%
   summarise(prob = mean(sim_price > max(df_prices$price.adjusted)))
 
+
 n_years_back <- 4
 df_prices_temp <- df_prices %>%
   dplyr::filter(ref.date > max(ref.date) - n_years_back*365)
@@ -386,16 +405,16 @@ p4 <- ggplot() +
   xlim(c(max(df_prices_temp$ref.date) - n_years_back*365,
          max(df_prices_temp$ref.date) + 5*365) )
 
-<<<<<<< HEAD
 ggsave('figs/fig06.png')
+
 
 graphics.off()
 
 my_idx_date <- first(which(tab_prob$prob > 0.5))
-df_date <- tibble(idx = c(first(which(tab_prob$prob > 0.001)),
-                          first(which(tab_prob$prob > 0.5)),
-                          first(which(tab_prob$prob > 0.75)),
-                          first(which(tab_prob$prob > 0.95))),
+df_date <- tibble(idx = c(first(which(tab_prob$prob > 0.05)),
+                          first(which(tab_prob$prob > 0.1)),
+                          first(which(tab_prob$prob > 0.14)),
+                          first(which(tab_prob$prob > 0.2))),
                   ref_date = tab_prob$ref_date[idx],
                   prob = tab_prob$prob[idx],
                   my_text = paste0(format(ref_date, '%m/%d/%Y'),
@@ -412,7 +431,7 @@ df_textbox <- tibble(ref_date = df_date$ref_date[2],
                                     ' are higher than 50% at ', format(ref_date, '%m/%d/%Y'), '.') )
 
 
-p2 <- ggplot(tab_prob, aes(x = ref_date, y = prob) ) + 
+p4 <- ggplot(tab_prob, aes(x = ref_date, y = prob) ) + 
   geom_line(size = 2) + 
   labs(title = paste0('Probabilities of ', series_name, ' Reaching its Historical Peak'),
        subtitle = paste0('Calculations based on simulations of ',
@@ -439,9 +458,6 @@ p2 <- ggplot(tab_prob, aes(x = ref_date, y = prob) ) +
 
 
 ggsave('figs/fig06_b.png')
-=======
-p4
->>>>>>> 0a387ab6a48f6fd9a899c7b5056c80deba2e3388
 
 ################################################################################
 #expirimental
@@ -464,6 +480,8 @@ p5 <- ggplot(quantiles_df, aes(x = ref_date)) +
 if("price.adjusted" %in% names(df_prices)) {
   p5 <- p5 + geom_line(data = df_prices, aes(x = ref.date, y = price.adjusted), color = "black")
 }
+
+ggsave('figs/fig06_c.png')
 
 # Print the plot
 print(p5)
