@@ -386,6 +386,7 @@ p4 <- ggplot() +
   xlim(c(max(df_prices_temp$ref.date) - n_years_back*365,
          max(df_prices_temp$ref.date) + 5*365) )
 
+<<<<<<< HEAD
 ggsave('figs/fig06.png')
 
 graphics.off()
@@ -438,6 +439,9 @@ p2 <- ggplot(tab_prob, aes(x = ref_date, y = prob) ) +
 
 
 ggsave('figs/fig06_b.png')
+=======
+p4
+>>>>>>> 0a387ab6a48f6fd9a899c7b5056c80deba2e3388
 
 ################################################################################
 #expirimental
