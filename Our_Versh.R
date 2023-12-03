@@ -14,6 +14,8 @@ library(texreg)
 library(rugarch)
 library(purrr)
 library(ggtext)
+library(dplyr)
+library(ggplot2)
 
 ###################################################
 first_date <- '2003-12-01' 
@@ -33,6 +35,7 @@ df_prices <- df  %>%
 
 colnames(df_prices)[colnames(df_prices) == "Date"] <- "ref.date"
 colnames(df_prices)[colnames(df_prices) == "Close"] <- "price.adjusted"
+df_prices <- df_prices[nrow(df_prices):1, ]
 
 # save data into file
 df_out <- 'GARCH-Data.rds'
@@ -84,8 +87,7 @@ p1 <- ggplot(df_prices, aes(x = ref.date, y = price.adjusted)) +
                          ' (', my_perc(real_ret_cop_year), ' per year)'),
        x = '',
        y = 'Index Value',
-       caption = 'Data from Yahoo Finance') + 
-  theme_bw(base_family = "TT Times New Roman") 
+       caption = 'Data from Yahoo Finance') 
 p1
 
 ggsave(filename = paste0('figs/fig02a_', series_name, '_prices.png'), 
@@ -104,7 +106,6 @@ p2 <- ggplot(df_prices,
        x = '',
        y = 'Log Returns',
        caption = 'Data from Business Insider') + 
-  theme_bw(base_family = "TT Times New Roman") +
   geom_point(data = largest_tab, aes(x = ref.date, y = log_ret), 
              size = 3, color = 'red'  ) +
   scale_y_continuous(labels = scales::percent) + 
@@ -125,8 +126,7 @@ pb
 
 
 p <- ggAcf(x = df_prices$log_ret, lag.max = 10) +
-  labs(title = paste0('Autocorrelogram for the Log Returns of ', series_name)) +
-  theme_bw(base_family = "TT Times New Roman")
+  labs(title = paste0('Autocorrelogram for the Log Returns of ', series_name))
 
 p
 
@@ -290,7 +290,6 @@ p3 <- ggplot(df_long %>%
                  color = type_model)) + 
   geom_point(size = 3.5, alpha = 0.65) + 
   coord_flip() + 
-  theme_bw(base_family = "TT Times New Roman") + 
   facet_wrap(~name, scales = 'free_x') + 
   geom_point(data = df_best_models, mapping = aes(x = reorder(model_name, 
                                                               order(type_model)),
@@ -328,20 +327,30 @@ write_rds(my_best_garch, 'data/garch_model.rds')
 my_garch = my_best_garch
 
 set.seed(8008135) 
-n_sim <- 5040
-
-n_days_ahead <- 2*365 # Number of days ahead to simulate (10*365 in paper)
 
 graphics.off()
 
+library(foreach)
+library(doParallel)
 
+# Register parallel backend
+no_cores <- detectCores() - 1  # Using one less than the total number of cores
+registerDoParallel(cores = no_cores)
 
-df_sim <- do_sim(n_sim = n_sim, 
-                 n_t = n_days_ahead, 
-                 my_garch, 
-                 df_prices = df_prices)
+# Parallel processing of simulations
+n_sim <- 5000
+n_days_ahead <- 5*365 # Number of days ahead to simulate
 
-glimpse(df_sim )
+results <- foreach(i_sim = 1:n_sim, .packages = c("tidyverse", "rugarch")) %dopar% {
+  do_sim(n_sim = 1, 
+         n_t = n_days_ahead, 
+         my_garch, 
+         df_prices = df_prices)
+}
+
+# Combine the results
+df_sim <- bind_rows(results)
+glimpse(df_sim)
 
 # calculate probabilities of reaching peak value
 tab_prob <- df_sim %>%
@@ -361,10 +370,9 @@ p4 <- ggplot() +
             aes(x = ref_date, 
                 y = sim_price, 
                 group = i_sim),
-            color = 'gray', 
+            color = 'red', 
             size = 0.25,
             alpha = 0.015) + 
-  theme_bw(base_family = "TT Times New Roman") + 
   geom_hline(yintercept = max(df_prices_temp$price.adjusted)) + 
   labs(title = paste0('Price Projections of ', series_name),
        subtitle = paste0('Total of ', n_sim, ' simulations based on a ',
@@ -376,6 +384,31 @@ p4 <- ggplot() +
   ylim(c(0.75*min(df_prices_temp$price.adjusted), 
          1.25*max(df_prices_temp$price.adjusted))) + 
   xlim(c(max(df_prices_temp$ref.date) - n_years_back*365,
-         max(df_prices_temp$ref.date) + 2*365) )
+         max(df_prices_temp$ref.date) + 5*365) )
 
-p1 
+p4
+
+################################################################################
+#expirimental
+
+quantiles_df <- df_sim %>%
+  group_by(ref_date) %>%
+  summarise(lower = quantile(sim_price, probs = 0.05),
+            upper = quantile(sim_price, probs = 0.95),
+            median = median(sim_price))
+
+# Plotting
+p5 <- ggplot(quantiles_df, aes(x = ref_date)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "blue", alpha = 0.2) +
+  geom_line(aes(y = median), color = "red") +
+  labs(title = "Probability Bands for Simulated Prices", 
+       x = "Date", 
+       y = "Price")
+
+# Add the actual price data if available
+if("price.adjusted" %in% names(df_prices)) {
+  p5 <- p5 + geom_line(data = df_prices, aes(x = ref.date, y = price.adjusted), color = "black")
+}
+
+# Print the plot
+print(p5)
